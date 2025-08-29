@@ -27,7 +27,7 @@ function getShiftLabel() {
     ).padStart(2, "0")}.${now.getFullYear()}`;
     const shift =
         hours >= 6 && hours < 18 ? "(Morning Shift)" : "(Night Shift)";
-    return `${date} daily breakage ${shift}`;
+    return `${date} - Daily Breakage - ${shift}`;
 }
 
 export default function TableNotesExcelUI() {
