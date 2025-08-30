@@ -31,6 +31,7 @@ function getShiftLabel() {
 }
 
 export default function TableNotesExcelUI() {
+    const [initialHeader, setInitialHeader] = useState(getShiftLabel());
     const [rows, setRows] = useState(DEFAULT_ROWS);
     const [cols, setCols] = useState(DEFAULT_COLS);
     const [grid, setGrid] = useState(() =>
@@ -142,7 +143,7 @@ export default function TableNotesExcelUI() {
         headerDiv.style.fontWeight = "bold";
         headerDiv.style.fontSize = "16px";
         headerDiv.style.marginBottom = "10px";
-        headerDiv.innerText = getShiftLabel();
+        headerDiv.innerText = initialHeader;
         exportDiv.appendChild(headerDiv);
 
         // Only include rows with content
@@ -323,7 +324,11 @@ export default function TableNotesExcelUI() {
             <div className="overflow-auto flex-1 p-4">
                 <div ref={tableRef} className="inline-block min-w-max">
                     <div className="font-bold text-lg mb-2">
-                        {getShiftLabel()}
+                        <input
+                            className="w-full  focus:outline-0"
+                            value={initialHeader}
+                            onChange={(e) => setInitialHeader(e.target.value)}
+                        />
                     </div>
                     <div className="border">
                         {grid.map((row, rIdx) => (
