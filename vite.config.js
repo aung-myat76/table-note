@@ -7,7 +7,14 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: "autoUpdate",
-            includeAssets: ["/icons/note-icon.png", "robots.txt"], // optional
+            includeAssets: [
+                "/icons/note-icon.png",
+                "robots.txt",
+                "/assets/main.css",
+            ], // optional
+            workbox: {
+                globPatterns: ["**/*.{js,css,html,png,svg}"],
+            },
             manifest: {
                 name: "Table Note app by Aung Myat Htut",
                 short_name: "Table Note",
