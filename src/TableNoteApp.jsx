@@ -8,6 +8,7 @@ const DEFAULT_COLS = 6;
 const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_COL_WIDTH = 120;
 
+// Create a default cell object
 const makeCell = () => ({
     text: "",
     bold: false,
@@ -15,11 +16,13 @@ const makeCell = () => ({
     bgColor: "#ffffff",
 });
 
+// Create a grid of cells
 const makeGrid = (rows, cols) =>
     Array.from({ length: rows }, () =>
         Array.from({ length: cols }, () => makeCell())
     );
 
+// Generate initial header text
 function getShiftLabel() {
     const now = new Date();
     const hours = now.getHours();
@@ -30,6 +33,14 @@ function getShiftLabel() {
         hours >= 6 && hours < 18 ? "(Morning Shift)" : "(Night Shift)";
     return `${date} - Daily Breakage - ${shift}`;
 }
+
+// Helper to measure text width for autofit
+const measureTextWidth = (text, font = "14px Arial") => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.font = font;
+    return ctx.measureText(text).width + 20; // padding
+};
 
 export default function TableNotesExcelUI() {
     const [initialHeader, setInitialHeader] = useState(getShiftLabel());
@@ -95,14 +106,11 @@ export default function TableNotesExcelUI() {
     // Daily Breakage
     const addDailyBreakage = () => {
         pushToHistory();
-
         if (cols < 4) {
             for (let i = 0; i < 4 - cols; i++) addCol();
         }
-
         setGrid((prev) =>
             produce(prev, (draft) => {
-                // Header row
                 const headerRow = [
                     {
                         text: "Items",
@@ -131,7 +139,6 @@ export default function TableNotesExcelUI() {
                 ];
                 draft[0] = headerRow.concat(draft[0].slice(4));
 
-                // Insert two sub-rows
                 draft.splice(
                     1,
                     0,
@@ -162,7 +169,6 @@ export default function TableNotesExcelUI() {
         e.preventDefault();
         const startX = e.clientX;
         const startWidth = colWidths[colIndex];
-
         const onMouseMove = (moveEvent) => {
             const diff = moveEvent.clientX - startX;
             setColWidths((prev) => {
@@ -171,17 +177,15 @@ export default function TableNotesExcelUI() {
                 return newWidths;
             });
         };
-
         const onMouseUp = () => {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
         };
-
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
     };
 
-    // Update Cell
+    // Update cell and auto-fit column (expand + shrink)
     const updateCell = (r, c, updates) => {
         pushToHistory();
         setGrid((prev) =>
@@ -189,15 +193,31 @@ export default function TableNotesExcelUI() {
                 draft[r][c] = { ...draft[r][c], ...updates };
             })
         );
+
+        // Auto-fit column width
+        setTimeout(() => {
+            const colMaxWidth = Math.max(
+                50,
+                ...grid.map((row) => {
+                    const text = row[c].text || "";
+                    return Math.min(400, text.length * 12 + 20); // Approximate width
+                })
+            );
+            setColWidths((prev) => {
+                const newWidths = [...prev];
+                newWidths[c] = colMaxWidth;
+                return newWidths;
+            });
+        }, 0);
     };
 
-    // Add Row / Column
+    // Add row / col
     const addRow = () => {
         pushToHistory();
         setGrid((prev) =>
-            produce(prev, (draft) => {
-                draft.push(Array.from({ length: cols }, () => makeCell()));
-            })
+            produce(prev, (draft) =>
+                draft.push(Array.from({ length: cols }, () => makeCell()))
+            )
         );
         setRowHeights((prev) => [...prev, DEFAULT_ROW_HEIGHT]);
         setRows((r) => r + 1);
@@ -206,9 +226,9 @@ export default function TableNotesExcelUI() {
     const addCol = () => {
         pushToHistory();
         setGrid((prev) =>
-            produce(prev, (draft) => {
-                draft.forEach((row) => row.push(makeCell()));
-            })
+            produce(prev, (draft) =>
+                draft.forEach((row) => row.push(makeCell()))
+            )
         );
         setColWidths((prev) => [...prev, DEFAULT_COL_WIDTH]);
         setCols((c) => c + 1);
@@ -232,7 +252,7 @@ export default function TableNotesExcelUI() {
         if (!tableRef.current) return;
 
         try {
-            // Clone table to a new div for export
+            // Clone table for export
             const exportDiv = document.createElement("div");
             exportDiv.style.display = "inline-block";
             exportDiv.style.background = "white";
@@ -247,12 +267,12 @@ export default function TableNotesExcelUI() {
             headerDiv.innerText = initialHeader;
             exportDiv.appendChild(headerDiv);
 
-            // Filter rows that have any text
+            // Only keep rows that have content
             const filteredRows = grid.filter((row) =>
                 row.some((cell) => cell.text.trim() !== "")
             );
 
-            // Determine columns that have any text
+            // Determine which columns have content
             const usedCols = Array.from({ length: cols }).map((_, c) =>
                 filteredRows.some((row) => row[c]?.text.trim() !== "")
             );
@@ -262,7 +282,7 @@ export default function TableNotesExcelUI() {
                 rowDiv.style.display = "flex";
 
                 row.forEach((cell, cIdx) => {
-                    if (!usedCols[cIdx]) return; // Skip empty columns
+                    if (!usedCols[cIdx]) return; // skip empty column
 
                     const cellDiv = document.createElement("div");
                     cellDiv.style.width = colWidths[cIdx] + "px";
@@ -274,7 +294,10 @@ export default function TableNotesExcelUI() {
                     cellDiv.style.background = cell.bgColor;
                     cellDiv.style.color = cell.textColor;
                     cellDiv.style.fontWeight = cell.bold ? "bold" : "normal";
+
+                    // Only put text if the cell has it
                     cellDiv.innerText = cell.text;
+
                     rowDiv.appendChild(cellDiv);
                 });
 
@@ -321,7 +344,6 @@ export default function TableNotesExcelUI() {
                 >
                     Daily Breakage
                 </button>
-
                 <button
                     onClick={undo}
                     disabled={history.length === 0}
@@ -422,7 +444,8 @@ export default function TableNotesExcelUI() {
                                                     text: e.target.value,
                                                 })
                                             }
-                                            className="w-full h-full bg-transparent text-center outline-none"
+                                            className="h-full bg-transparent text-center outline-none"
+                                            style={{ width: "100%" }}
                                         />
                                         <div
                                             onMouseDown={(e) =>
