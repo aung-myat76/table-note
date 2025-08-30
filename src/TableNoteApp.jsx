@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import { Save, Plus, Bold, Paintbrush } from "lucide-react";
+import { produce } from "immer";
 
 const DEFAULT_ROWS = 6;
 const DEFAULT_COLS = 6;
@@ -43,12 +44,120 @@ export default function TableNotesExcelUI() {
     const [colWidths, setColWidths] = useState(
         Array.from({ length: DEFAULT_COLS }, () => DEFAULT_COL_WIDTH)
     );
-
     const [activeCell, setActiveCell] = useState(null);
     const [formatClipboard, setFormatClipboard] = useState(null);
     const tableRef = useRef(null);
 
-    // --- Column Resize ---
+    // Undo / Redo
+    const [history, setHistory] = useState([]);
+    const [future, setFuture] = useState([]);
+
+    const pushToHistory = () => {
+        setHistory((prev) => [
+            ...prev,
+            { grid, rows, cols, rowHeights, colWidths, initialHeader },
+        ]);
+        setFuture([]);
+    };
+
+    const undo = () => {
+        if (!history.length) return;
+        const prevState = history[history.length - 1];
+        setHistory((prev) => prev.slice(0, prev.length - 1));
+        setFuture((prev) => [
+            ...prev,
+            { grid, rows, cols, rowHeights, colWidths, initialHeader },
+        ]);
+        setGrid(prevState.grid);
+        setRows(prevState.rows);
+        setCols(prevState.cols);
+        setRowHeights(prevState.rowHeights);
+        setColWidths(prevState.colWidths);
+        setInitialHeader(prevState.initialHeader);
+    };
+
+    const redo = () => {
+        if (!future.length) return;
+        const nextState = future[future.length - 1];
+        setFuture((prev) => prev.slice(0, prev.length - 1));
+        setHistory((prev) => [
+            ...prev,
+            { grid, rows, cols, rowHeights, colWidths, initialHeader },
+        ]);
+        setGrid(nextState.grid);
+        setRows(nextState.rows);
+        setCols(nextState.cols);
+        setRowHeights(nextState.rowHeights);
+        setColWidths(nextState.colWidths);
+        setInitialHeader(nextState.initialHeader);
+    };
+
+    // Daily Breakage
+    const addDailyBreakage = () => {
+        pushToHistory();
+
+        if (cols < 4) {
+            for (let i = 0; i < 4 - cols; i++) addCol();
+        }
+
+        setGrid((prev) =>
+            produce(prev, (draft) => {
+                // Header row
+                const headerRow = [
+                    {
+                        text: "Items",
+                        bold: true,
+                        textColor: "#fff",
+                        bgColor: "#3b82f6",
+                    },
+                    {
+                        text: "Get",
+                        bold: true,
+                        textColor: "#fff",
+                        bgColor: "#3b82f6",
+                    },
+                    {
+                        text: "Lost",
+                        bold: true,
+                        textColor: "#fff",
+                        bgColor: "#3b82f6",
+                    },
+                    {
+                        text: "Total",
+                        bold: true,
+                        textColor: "#fff",
+                        bgColor: "#3b82f6",
+                    },
+                ];
+                draft[0] = headerRow.concat(draft[0].slice(4));
+
+                // Insert two sub-rows
+                draft.splice(
+                    1,
+                    0,
+                    Array.from({ length: cols }, () => makeCell())
+                );
+                draft.splice(
+                    2,
+                    0,
+                    Array.from({ length: cols }, () => makeCell())
+                );
+
+                draft[1][0].text = "MB Qt (Pro)";
+                draft[2][0].text = "MB Qt (N)";
+            })
+        );
+
+        setRowHeights((prev) => {
+            const newHeights = [...prev];
+            newHeights.splice(1, 0, DEFAULT_ROW_HEIGHT);
+            newHeights.splice(2, 0, DEFAULT_ROW_HEIGHT);
+            return newHeights;
+        });
+        setRows((prev) => prev + 2);
+    };
+
+    // Column Resize
     const startColResize = (e, colIndex) => {
         e.preventDefault();
         const startX = e.clientX;
@@ -72,50 +181,40 @@ export default function TableNotesExcelUI() {
         window.addEventListener("mouseup", onMouseUp);
     };
 
-    // --- Update Cell with Auto-Fit ---
+    // Update Cell
     const updateCell = (r, c, updates) => {
-        setGrid((prev) => {
-            const copy = prev.map((row) => row.slice());
-            copy[r][c] = { ...copy[r][c], ...updates };
-            return copy;
-        });
-
-        if (updates.text !== undefined) {
-            const canvas = document.createElement("canvas");
-            const context = canvas.getContext("2d");
-            const style = window.getComputedStyle(document.body);
-            context.font = `${grid[r][c].bold ? "bold " : ""}16px ${
-                style.fontFamily
-            }`;
-            const textWidth = context.measureText(updates.text).width + 30;
-
-            setColWidths((prev) => {
-                const newWidths = [...prev];
-                if (textWidth > newWidths[c]) newWidths[c] = textWidth;
-                else if (textWidth < DEFAULT_COL_WIDTH)
-                    newWidths[c] = DEFAULT_COL_WIDTH;
-                return newWidths;
-            });
-        }
+        pushToHistory();
+        setGrid((prev) =>
+            produce(prev, (draft) => {
+                draft[r][c] = { ...draft[r][c], ...updates };
+            })
+        );
     };
 
-    // --- Add Row / Column ---
+    // Add Row / Column
     const addRow = () => {
-        setGrid((prev) => [
-            ...prev,
-            Array.from({ length: cols }, () => makeCell()),
-        ]);
+        pushToHistory();
+        setGrid((prev) =>
+            produce(prev, (draft) => {
+                draft.push(Array.from({ length: cols }, () => makeCell()));
+            })
+        );
         setRowHeights((prev) => [...prev, DEFAULT_ROW_HEIGHT]);
         setRows((r) => r + 1);
     };
 
     const addCol = () => {
-        setGrid((prev) => prev.map((row) => [...row, makeCell()]));
+        pushToHistory();
+        setGrid((prev) =>
+            produce(prev, (draft) => {
+                draft.forEach((row) => row.push(makeCell()));
+            })
+        );
         setColWidths((prev) => [...prev, DEFAULT_COL_WIDTH]);
         setCols((c) => c + 1);
     };
 
-    // --- Copy / Apply Format ---
+    // Copy / Apply Format
     const copyFormat = () => {
         if (!activeCell) return;
         setFormatClipboard({ ...grid[activeCell.r][activeCell.c] });
@@ -128,127 +227,70 @@ export default function TableNotesExcelUI() {
         setFormatClipboard(null);
     };
 
-    // --- Export Image (header + content only) ---
+    // Export PNG
     const exportImage = async () => {
         if (!tableRef.current) return;
 
-        const exportDiv = document.createElement("div");
-        exportDiv.style.display = "inline-block";
-        exportDiv.style.border = "1px solid #ccc";
-        exportDiv.style.padding = "10px";
-        exportDiv.style.background = "white";
+        try {
+            // Clone table to a new div for export
+            const exportDiv = document.createElement("div");
+            exportDiv.style.display = "inline-block";
+            exportDiv.style.background = "white";
+            exportDiv.style.padding = "10px";
+            exportDiv.style.border = "1px solid #ccc";
 
-        // Header
-        const headerDiv = document.createElement("div");
-        headerDiv.style.fontWeight = "bold";
-        headerDiv.style.fontSize = "16px";
-        headerDiv.style.marginBottom = "10px";
-        headerDiv.innerText = initialHeader;
-        exportDiv.appendChild(headerDiv);
+            // Header
+            const headerDiv = document.createElement("div");
+            headerDiv.style.fontWeight = "bold";
+            headerDiv.style.fontSize = "16px";
+            headerDiv.style.marginBottom = "10px";
+            headerDiv.innerText = initialHeader;
+            exportDiv.appendChild(headerDiv);
 
-        // Only include rows with content
-        const filteredRows = grid.filter((row) =>
-            row.some((cell) => cell.text.trim() !== "")
-        );
-        const hasContentCol = Array.from({ length: cols }).map((_, c) =>
-            filteredRows.some((row) => row[c]?.text.trim() !== "")
-        );
+            // Filter rows that have any text
+            const filteredRows = grid.filter((row) =>
+                row.some((cell) => cell.text.trim() !== "")
+            );
 
-        filteredRows.forEach((row, rIdx) => {
-            const rowDiv = document.createElement("div");
-            rowDiv.style.display = "flex";
-            row.forEach((cell, cIdx) => {
-                if (!hasContentCol[cIdx]) return;
-                const cellDiv = document.createElement("div");
-                cellDiv.style.width = colWidths[cIdx] + "px";
-                cellDiv.style.height = rowHeights[rIdx] + "px";
-                cellDiv.style.border = "1px solid #ccc";
-                cellDiv.style.display = "flex";
-                cellDiv.style.alignItems = "center";
-                cellDiv.style.justifyContent = "center";
-                cellDiv.style.background = cell.bgColor;
-                cellDiv.style.color = cell.textColor;
-                cellDiv.style.fontWeight = cell.bold ? "bold" : "normal";
-                cellDiv.innerText = cell.text;
-                rowDiv.appendChild(cellDiv);
+            // Determine columns that have any text
+            const usedCols = Array.from({ length: cols }).map((_, c) =>
+                filteredRows.some((row) => row[c]?.text.trim() !== "")
+            );
+
+            filteredRows.forEach((row, rIdx) => {
+                const rowDiv = document.createElement("div");
+                rowDiv.style.display = "flex";
+
+                row.forEach((cell, cIdx) => {
+                    if (!usedCols[cIdx]) return; // Skip empty columns
+
+                    const cellDiv = document.createElement("div");
+                    cellDiv.style.width = colWidths[cIdx] + "px";
+                    cellDiv.style.height = rowHeights[rIdx] + "px";
+                    cellDiv.style.border = "1px solid #ccc";
+                    cellDiv.style.display = "flex";
+                    cellDiv.style.alignItems = "center";
+                    cellDiv.style.justifyContent = "center";
+                    cellDiv.style.background = cell.bgColor;
+                    cellDiv.style.color = cell.textColor;
+                    cellDiv.style.fontWeight = cell.bold ? "bold" : "normal";
+                    cellDiv.innerText = cell.text;
+                    rowDiv.appendChild(cellDiv);
+                });
+
+                exportDiv.appendChild(rowDiv);
             });
-            exportDiv.appendChild(rowDiv);
-        });
 
-        document.body.appendChild(exportDiv);
-        const dataUrl = await toPng(exportDiv);
-        const link = document.createElement("a");
-        link.download = "table.png";
-        link.href = dataUrl;
-        link.click();
-        document.body.removeChild(exportDiv);
-    };
-
-    // --- Daily Breakage Button ---
-    const addDailyBreakage = () => {
-        if (cols < 4) {
-            for (let i = 0; i < 4 - cols; i++) addCol();
+            document.body.appendChild(exportDiv);
+            const dataUrl = await toPng(exportDiv, { cacheBust: true });
+            const link = document.createElement("a");
+            link.download = "table.png";
+            link.href = dataUrl;
+            link.click();
+            document.body.removeChild(exportDiv);
+        } catch (err) {
+            console.error("Export failed:", err);
         }
-
-        setGrid((prev) => {
-            const newGrid = prev.map((row) => row.slice());
-
-            // Header row
-            const headerRow = [
-                {
-                    text: "Items",
-                    bold: true,
-                    textColor: "#ffffff",
-                    bgColor: "#3b82f6",
-                },
-                {
-                    text: "Get",
-                    bold: true,
-                    textColor: "#ffffff",
-                    bgColor: "#3b82f6",
-                },
-                {
-                    text: "Lost",
-                    bold: true,
-                    textColor: "#ffffff",
-                    bgColor: "#3b82f6",
-                },
-                {
-                    text: "Total",
-                    bold: true,
-                    textColor: "#ffffff",
-                    bgColor: "#3b82f6",
-                },
-            ];
-
-            newGrid[0] = headerRow.concat(newGrid[0].slice(4));
-
-            // MB Qt rows under Items
-            let tempGrid = [...newGrid];
-            tempGrid.splice(
-                1,
-                0,
-                Array.from({ length: cols }, () => makeCell())
-            );
-            tempGrid.splice(
-                2,
-                0,
-                Array.from({ length: cols }, () => makeCell())
-            );
-            tempGrid[1][0].text = "MB Qt (Pro)";
-            tempGrid[2][0].text = "MB Qt (N)";
-
-            return tempGrid;
-        });
-
-        setRowHeights((prev) => {
-            const newHeights = [...prev];
-            newHeights.splice(1, 0, DEFAULT_ROW_HEIGHT);
-            newHeights.splice(2, 0, DEFAULT_ROW_HEIGHT);
-            return newHeights;
-        });
-
-        setRows((prev) => prev + 2);
     };
 
     return (
@@ -279,6 +321,22 @@ export default function TableNotesExcelUI() {
                 >
                     Daily Breakage
                 </button>
+
+                <button
+                    onClick={undo}
+                    disabled={history.length === 0}
+                    className="px-2 py-1 border rounded flex items-center gap-1"
+                >
+                    Undo
+                </button>
+                <button
+                    onClick={redo}
+                    disabled={future.length === 0}
+                    className="px-2 py-1 border rounded flex items-center gap-1"
+                >
+                    Redo
+                </button>
+
                 {activeCell && (
                     <div className="flex items-center gap-2 ml-4">
                         <button
@@ -325,7 +383,7 @@ export default function TableNotesExcelUI() {
                 <div ref={tableRef} className="inline-block min-w-max">
                     <div className="font-bold text-lg mb-2">
                         <input
-                            className="w-full  focus:outline-0"
+                            className="w-full focus:outline-0"
                             value={initialHeader}
                             onChange={(e) => setInitialHeader(e.target.value)}
                         />
