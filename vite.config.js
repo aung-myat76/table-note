@@ -7,9 +7,9 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: "autoUpdate",
-            // Cache all JS, CSS, HTML, images automatically
+            // Automatically cache all built assets
             workbox: {
-                globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+                globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
             },
             includeAssets: [
                 "/favicon.ico",
@@ -40,4 +40,6 @@ export default defineConfig({
             },
         }),
     ],
+    // Ensure base path is "/" so assets resolve correctly offline
+    base: "/",
 });
