@@ -30,8 +30,8 @@ function getShiftLabel() {
         now.getMonth() + 1
     ).padStart(2, "0")}.${now.getFullYear()}`;
     const shift =
-        hours >= 6 && hours < 18 ? "(Morning Shift)" : "(Night Shift)";
-    return `${date} - Daily Breakage - ${shift}`;
+        hours >= 6 && hours < 18 ? "(Morning Shift)" : "(Morning Shift + Night Shift)";
+    return `${date} ${shift} - Daily Breakage`;
 }
 
 // Helper to measure text width for autofit
@@ -150,8 +150,8 @@ export default function TableNotesExcelUI() {
                     Array.from({ length: cols }, () => makeCell())
                 );
 
-                draft[1][0].text = "MB Qt (Pro)";
-                draft[2][0].text = "MB Qt (N)";
+                // draft[1][0].text = "MB Qt (Pro)";
+                // draft[2][0].text = "MB Qt (N)";
             })
         );
 
