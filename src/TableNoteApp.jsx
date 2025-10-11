@@ -30,8 +30,10 @@ function getShiftLabel() {
         now.getMonth() + 1
     ).padStart(2, "0")}.${now.getFullYear()}`;
     const shift =
-        hours >= 6 && hours < 18 ? "(Morning Shift)" : "(Night Shift)";
-    return `${date} - Daily Breakage - ${shift}`;
+        hours >= 6 && hours < 18
+            ? "(Morning Shift)"
+            : "(Morning & Night Shift)";
+    return `${date} ${shift} - Daily Breakage`;
 }
 
 // Helper to measure text width for autofit
@@ -115,25 +117,25 @@ export default function TableNotesExcelUI() {
                     {
                         text: "Items",
                         bold: true,
-                        textColor: "#fff",
+                        textColor: "#ffffff",
                         bgColor: "#3b82f6",
                     },
                     {
                         text: "Get",
                         bold: true,
-                        textColor: "#fff",
+                        textColor: "#ffffff",
                         bgColor: "#3b82f6",
                     },
                     {
                         text: "Lost",
                         bold: true,
-                        textColor: "#fff",
+                        textColor: "#ffffff",
                         bgColor: "#3b82f6",
                     },
                     {
                         text: "Total",
                         bold: true,
-                        textColor: "#fff",
+                        textColor: "#ffffff",
                         bgColor: "#3b82f6",
                     },
                 ];
@@ -150,8 +152,8 @@ export default function TableNotesExcelUI() {
                     Array.from({ length: cols }, () => makeCell())
                 );
 
-                draft[1][0].text = "MB Qt (Pro)";
-                draft[2][0].text = "MB Qt (N)";
+                // draft[1][0].text = "MB Qt (Pro)";
+                // draft[2][0].text = "MB Qt (N)";
             })
         );
 
@@ -215,9 +217,12 @@ export default function TableNotesExcelUI() {
     const addRow = () => {
         pushToHistory();
         setGrid((prev) =>
-            produce(prev, (draft) =>
-                draft.push(Array.from({ length: cols }, () => makeCell()))
-            )
+            produce(prev, (draft) => {
+                const newRow = Array.from({ length: prev[0].length }, () =>
+                    makeCell()
+                );
+                draft.push(newRow);
+            })
         );
         setRowHeights((prev) => [...prev, DEFAULT_ROW_HEIGHT]);
         setRows((r) => r + 1);
@@ -319,48 +324,52 @@ export default function TableNotesExcelUI() {
     return (
         <div className="h-screen flex flex-col bg-gray-100">
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 p-2 bg-white shadow">
-                <button
-                    onClick={addRow}
-                    className="px-2 py-1 border rounded flex items-center gap-1"
-                >
-                    <Plus size={14} /> Row
-                </button>
-                <button
-                    onClick={addCol}
-                    className="px-2 py-1 border rounded flex items-center gap-1"
-                >
-                    <Plus size={14} /> Col
-                </button>
-                <button
-                    onClick={exportImage}
-                    className="px-2 py-1 border rounded flex items-center gap-1"
-                >
-                    <Save size={14} /> PNG
-                </button>
-                <button
-                    onClick={addDailyBreakage}
-                    className="px-2 py-1 border rounded flex items-center gap-1 bg-blue-500 text-white"
-                >
-                    Daily Breakage
-                </button>
-                <button
-                    onClick={undo}
-                    disabled={history.length === 0}
-                    className="px-2 py-1 border rounded flex items-center gap-1"
-                >
-                    Undo
-                </button>
-                <button
-                    onClick={redo}
-                    disabled={future.length === 0}
-                    className="px-2 py-1 border rounded flex items-center gap-1"
-                >
-                    Redo
-                </button>
+            <div className="flex flex-col justify-center items-between gap-2 p-2 bg-white shadow">
+                <div className="three-items">
+                    <button
+                        onClick={addRow}
+                        className="px-2 py-1 border rounded flex justify-center items-center gap-1"
+                    >
+                        <Plus size={14} /> Row
+                    </button>
+                    <button
+                        onClick={addCol}
+                        className="px-2 py-1 border rounded flex justify-center items-center gap-1"
+                    >
+                        <Plus size={14} /> Col
+                    </button>
+                    <button
+                        onClick={addDailyBreakage}
+                        className="px-2 py-1 border rounded flex justify-center items-center gap-1 bg-blue-500 text-white"
+                    >
+                        Breakage
+                    </button>
+                </div>
 
+                <div className="three-items">
+                    <button
+                        onClick={undo}
+                        disabled={history.length === 0}
+                        className="px-2 py-1 border rounded flex items-center justify-center gap-1"
+                    >
+                        Undo
+                    </button>
+                    <button
+                        onClick={redo}
+                        disabled={future.length === 0}
+                        className="px-2 py-1 border rounded flex items-center justify-center gap-1"
+                    >
+                        Redo
+                    </button>
+                    <button
+                        onClick={exportImage}
+                        className="px-2 py-1 border rounded flex items-center justify-center gap-1 text-white bg-green-500"
+                    >
+                        <Save size={14} /> Save
+                    </button>
+                </div>
                 {activeCell && (
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="three-items">
                         <button
                             onClick={() =>
                                 updateCell(activeCell.r, activeCell.c, {
@@ -368,12 +377,14 @@ export default function TableNotesExcelUI() {
                                         .bold,
                                 })
                             }
-                            className="px-2 py-1 border rounded"
+                            className="px-1 py-1 border rounded text-center font-bold"
                         >
-                            <Bold size={14} />
+                            B
                         </button>
+                        <label htmlFor="text">Text: </label>
                         <input
                             type="color"
+                            id="text"
                             value={grid[activeCell.r][activeCell.c].textColor}
                             onChange={(e) =>
                                 updateCell(activeCell.r, activeCell.c, {
@@ -381,7 +392,9 @@ export default function TableNotesExcelUI() {
                                 })
                             }
                         />
+                        <label htmlFor="fill">Fill: </label>
                         <input
+                            id="fill"
                             type="color"
                             value={grid[activeCell.r][activeCell.c].bgColor}
                             onChange={(e) =>
@@ -392,9 +405,9 @@ export default function TableNotesExcelUI() {
                         />
                         <button
                             onClick={copyFormat}
-                            className="px-2 py-1 border rounded flex items-center gap-1"
+                            className="px-2 py-1 border rounded flex justify-center items-center gap-1"
                         >
-                            <Paintbrush size={14} /> Copy Format
+                            <Paintbrush size={14} /> Painter
                         </button>
                     </div>
                 )}

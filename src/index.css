@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+.three-items {
+    @apply flex justify-between items-center gap-2;
+}
+
+.three-items button {
+    @apply flex-1 cursor-pointer;
+}
