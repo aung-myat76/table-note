@@ -13,7 +13,7 @@ const makeCell = () => ({
     text: "",
     bold: false,
     textColor: "#0f172a",
-    bgColor: "#ffffff",
+    bgColor: "#ffffff"
 });
 
 // Create a grid of cells
@@ -21,14 +21,19 @@ const makeGrid = (rows, cols) =>
     Array.from({ length: rows }, () =>
         Array.from({ length: cols }, () => makeCell())
     );
-
+const getDate = () => {
+    const now = new Date();
+    const date = `${String(now.getDate()).padStart(2, "0")}.${String(
+        now.getMonth() + 1
+    ).padStart(2, "0")}.${now.getFullYear()}`;
+    return date;
+};
 // Generate initial header text
 function getShiftLabel() {
     const now = new Date();
     const hours = now.getHours();
-    const date = `${String(now.getDate()).padStart(2, "0")}.${String(
-        now.getMonth() + 1
-    ).padStart(2, "0")}.${now.getFullYear()}`;
+    const date = getDate();
+
     const shift =
         hours >= 6 && hours < 18
             ? "(Morning Shift)"
@@ -37,12 +42,12 @@ function getShiftLabel() {
 }
 
 // Helper to measure text width for autofit
-const measureTextWidth = (text, font = "14px Arial") => {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    ctx.font = font;
-    return ctx.measureText(text).width + 20; // padding
-};
+// const measureTextWidth = (text, font = "14px Arial") => {
+//     const canvas = document.createElement("canvas");
+//     const ctx = canvas.getContext("2d");
+//     ctx.font = font;
+//     return ctx.measureText(text).width + 20; // padding
+// };
 
 export default function TableNotesExcelUI() {
     const [initialHeader, setInitialHeader] = useState(getShiftLabel());
@@ -68,7 +73,7 @@ export default function TableNotesExcelUI() {
     const pushToHistory = () => {
         setHistory((prev) => [
             ...prev,
-            { grid, rows, cols, rowHeights, colWidths, initialHeader },
+            { grid, rows, cols, rowHeights, colWidths, initialHeader }
         ]);
         setFuture([]);
     };
@@ -79,7 +84,7 @@ export default function TableNotesExcelUI() {
         setHistory((prev) => prev.slice(0, prev.length - 1));
         setFuture((prev) => [
             ...prev,
-            { grid, rows, cols, rowHeights, colWidths, initialHeader },
+            { grid, rows, cols, rowHeights, colWidths, initialHeader }
         ]);
         setGrid(prevState.grid);
         setRows(prevState.rows);
@@ -95,7 +100,7 @@ export default function TableNotesExcelUI() {
         setFuture((prev) => prev.slice(0, prev.length - 1));
         setHistory((prev) => [
             ...prev,
-            { grid, rows, cols, rowHeights, colWidths, initialHeader },
+            { grid, rows, cols, rowHeights, colWidths, initialHeader }
         ]);
         setGrid(nextState.grid);
         setRows(nextState.rows);
@@ -118,26 +123,26 @@ export default function TableNotesExcelUI() {
                         text: "Items",
                         bold: true,
                         textColor: "#ffffff",
-                        bgColor: "#3b82f6",
+                        bgColor: "#3b82f6"
                     },
                     {
                         text: "Get",
                         bold: true,
                         textColor: "#ffffff",
-                        bgColor: "#3b82f6",
+                        bgColor: "#3b82f6"
                     },
                     {
                         text: "Lost",
                         bold: true,
                         textColor: "#ffffff",
-                        bgColor: "#3b82f6",
+                        bgColor: "#3b82f6"
                     },
                     {
                         text: "Total",
                         bold: true,
                         textColor: "#ffffff",
-                        bgColor: "#3b82f6",
-                    },
+                        bgColor: "#3b82f6"
+                    }
                 ];
                 draft[0] = headerRow.concat(draft[0].slice(4));
 
@@ -312,7 +317,7 @@ export default function TableNotesExcelUI() {
             document.body.appendChild(exportDiv);
             const dataUrl = await toPng(exportDiv, { cacheBust: true });
             const link = document.createElement("a");
-            link.download = "table.png";
+            link.download = `Breakage_${getDate()}_${getShiftLabel()}`;
             link.href = dataUrl;
             link.click();
             document.body.removeChild(exportDiv);
@@ -328,20 +333,17 @@ export default function TableNotesExcelUI() {
                 <div className="three-items">
                     <button
                         onClick={addRow}
-                        className="px-2 py-1 border rounded flex justify-center items-center gap-1"
-                    >
+                        className="px-2 py-1 border rounded flex justify-center items-center gap-1">
                         <Plus size={14} /> Row
                     </button>
                     <button
                         onClick={addCol}
-                        className="px-2 py-1 border rounded flex justify-center items-center gap-1"
-                    >
+                        className="px-2 py-1 border rounded flex justify-center items-center gap-1">
                         <Plus size={14} /> Col
                     </button>
                     <button
                         onClick={addDailyBreakage}
-                        className="px-2 py-1 border rounded flex justify-center items-center gap-1 bg-blue-500 text-white"
-                    >
+                        className="px-2 py-1 border rounded flex justify-center items-center gap-1 bg-blue-500 text-white">
                         Breakage
                     </button>
                 </div>
@@ -350,21 +352,18 @@ export default function TableNotesExcelUI() {
                     <button
                         onClick={undo}
                         disabled={history.length === 0}
-                        className="px-2 py-1 border rounded flex items-center justify-center gap-1"
-                    >
+                        className="px-2 py-1 border rounded flex items-center justify-center gap-1">
                         Undo
                     </button>
                     <button
                         onClick={redo}
                         disabled={future.length === 0}
-                        className="px-2 py-1 border rounded flex items-center justify-center gap-1"
-                    >
+                        className="px-2 py-1 border rounded flex items-center justify-center gap-1">
                         Redo
                     </button>
                     <button
                         onClick={exportImage}
-                        className="px-2 py-1 border rounded flex items-center justify-center gap-1 text-white bg-green-500"
-                    >
+                        className="px-2 py-1 border rounded flex items-center justify-center gap-1 text-white bg-green-500">
                         <Save size={14} /> Save
                     </button>
                 </div>
@@ -373,12 +372,10 @@ export default function TableNotesExcelUI() {
                         <button
                             onClick={() =>
                                 updateCell(activeCell.r, activeCell.c, {
-                                    bold: !grid[activeCell.r][activeCell.c]
-                                        .bold,
+                                    bold: !grid[activeCell.r][activeCell.c].bold
                                 })
                             }
-                            className="px-1 py-1 border rounded text-center font-bold"
-                        >
+                            className="px-1 py-1 border rounded text-center font-bold">
                             B
                         </button>
                         <label htmlFor="text">Text: </label>
@@ -388,7 +385,7 @@ export default function TableNotesExcelUI() {
                             value={grid[activeCell.r][activeCell.c].textColor}
                             onChange={(e) =>
                                 updateCell(activeCell.r, activeCell.c, {
-                                    textColor: e.target.value,
+                                    textColor: e.target.value
                                 })
                             }
                         />
@@ -399,14 +396,13 @@ export default function TableNotesExcelUI() {
                             value={grid[activeCell.r][activeCell.c].bgColor}
                             onChange={(e) =>
                                 updateCell(activeCell.r, activeCell.c, {
-                                    bgColor: e.target.value,
+                                    bgColor: e.target.value
                                 })
                             }
                         />
                         <button
                             onClick={copyFormat}
-                            className="px-2 py-1 border rounded flex justify-center items-center gap-1"
-                        >
+                            className="px-2 py-1 border rounded flex justify-center items-center gap-1">
                             <Paintbrush size={14} /> Painter
                         </button>
                     </div>
@@ -437,7 +433,7 @@ export default function TableNotesExcelUI() {
                                             fontWeight: cell.bold
                                                 ? "bold"
                                                 : "normal",
-                                            position: "relative",
+                                            position: "relative"
                                         }}
                                         className="border flex items-center justify-center"
                                         onClick={() => {
@@ -446,15 +442,14 @@ export default function TableNotesExcelUI() {
                                             else
                                                 setActiveCell({
                                                     r: rIdx,
-                                                    c: cIdx,
+                                                    c: cIdx
                                                 });
-                                        }}
-                                    >
+                                        }}>
                                         <input
                                             value={cell.text}
                                             onChange={(e) =>
                                                 updateCell(rIdx, cIdx, {
-                                                    text: e.target.value,
+                                                    text: e.target.value
                                                 })
                                             }
                                             className="h-full bg-transparent text-center outline-none"
@@ -471,7 +466,7 @@ export default function TableNotesExcelUI() {
                                                 width: "5px",
                                                 height: "100%",
                                                 cursor: "col-resize",
-                                                zIndex: 10,
+                                                zIndex: 10
                                             }}
                                         />
                                     </div>
