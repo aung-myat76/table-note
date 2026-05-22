@@ -317,7 +317,7 @@ export default function TableNotesExcelUI() {
             document.body.appendChild(exportDiv);
             const dataUrl = await toPng(exportDiv, { cacheBust: true });
             const link = document.createElement("a");
-            link.download = `Breakage_${getDate()}_${getShiftLabel()}`;
+            link.download = `Breakage_${getDate()}_${getShiftLabel()}.png`;
             link.href = dataUrl;
             link.click();
             document.body.removeChild(exportDiv);
